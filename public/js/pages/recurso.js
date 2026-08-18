@@ -15,7 +15,6 @@ const CONFIG_RECURSO = {
     { nome: 'status_recurso', label: 'Status' },
     { nome: 'resultado_final', label: 'Resultado' },
     { nome: 'valor_reembolso', label: 'Reembolso', formato: Util.moeda },
-    { nome: 'data_abertura', label: 'Abertura', formato: Util.dataBr },
   ],
 };
 const PaginaRecurso = criarPaginaFilha(CONFIG_RECURSO);
