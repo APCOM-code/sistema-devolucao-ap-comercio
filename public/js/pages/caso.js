@@ -126,7 +126,7 @@ const PaginaCaso = (() => {
     } else {
       area.innerHTML = `
         <div class="grid-tiles" style="margin-bottom:14px;">
-          <div class="tile"><div class="label">Abertura do Recurso</div><div class="value" style="font-size:15px;">${registro.data_abertura_recurso ? Util.dataBr(registro.data_abertura_recurso) : 'Ainda não aberto'}</div></div>
+          <div class="tile"><div class="label">Data</div><div class="value" style="font-size:15px;">${registro.data_abertura_recurso ? Util.dataBr(registro.data_abertura_recurso) : 'Ainda não aberto'}</div></div>
           <div class="tile"><div class="label">Cenário</div><div class="value" style="font-size:15px;">${registro.categoria_condicao || '—'} ${registro.reembolsado ? '· reembolsado' : ''}</div></div>
           <div class="tile"><div class="label">Resultado Financeiro</div><div class="value" style="font-size:20px;color:${registro.resultado_financeiro >= 0 ? 'var(--good-text)' : 'var(--critical)'}">${Util.moeda(registro.resultado_financeiro)}</div></div>
         </div>
