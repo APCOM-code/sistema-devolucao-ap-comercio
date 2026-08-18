@@ -1,0 +1,20 @@
+{
+  "name": "sistema-devolucao-ap-comercio",
+  "version": "1.0.0",
+  "description": "Sistema de controle de devolucoes - AP Comercio",
+  "main": "server/index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "import": "node server/import/import.js"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.17.4",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "xlsx": "^0.18.5"
+  }
+}
