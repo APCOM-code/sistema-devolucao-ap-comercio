@@ -1,0 +1,9 @@
+node_modules/
+devolucoes.db
+devolucoes.db-shm
+devolucoes.db-wal
+.env
+
+# Dados reais do historico - nunca vao pro repositorio publico
+server/import/raw_planilha.txt
+server/import/seed_data.json
