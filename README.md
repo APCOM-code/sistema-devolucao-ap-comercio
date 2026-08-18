@@ -1,29 +1,15 @@
 # Sistema de Controle de Devoluções — AP Comércio
 
-Sistema local (web) que substitui a planilha de triagem de devolução. Roda neste computador
-("servidor") e pode ser acessado por outros computadores/celulares na mesma rede local, sem
-custo de hospedagem.
+Sistema web que substitui a planilha de triagem de devolução. Hospedado gratuitamente na nuvem
+(Render + Turso), acessível de qualquer lugar, sem depender de nenhum computador ligado.
 
-## Como iniciar
+## Acesse aqui
 
-1. Dê **dois cliques** em `iniciar.bat` nesta pasta.
-   - Na primeira vez, ele instala as dependências e importa o histórico da planilha
-     automaticamente (pode levar um minuto).
-   - Nas próximas vezes, ele só sobe o sistema.
-2. Deixe essa janela preta aberta — é o servidor rodando. Fechar a janela desliga o sistema.
-3. Acesse no navegador: **http://localhost:3000**
+**https://sistema-devolucao-ap-comercio.onrender.com**
 
-## Acessar de outro computador/celular na mesma rede
-
-No computador que está rodando o `iniciar.bat`, abra o Prompt de Comando e digite `ipconfig`.
-Procure o "Endereço IPv4" (algo como `192.168.0.15`). Nos outros dispositivos (mesma rede
-Wi-Fi/cabo), acesse pelo navegador:
-
-```
-http://192.168.0.15:3000
-```
-
-(troque pelo IP real do computador-servidor)
+Funciona em qualquer computador, tablet ou celular com internet — não precisa estar na rede da
+loja. Por ser um plano gratuito, se ninguém acessar por 15 minutos o site "dorme"; o primeiro
+acesso depois disso demora uns 30-50 segundos pra "acordar" — depois disso fica rápido normal.
 
 ## As 5 telas
 
@@ -36,27 +22,56 @@ http://192.168.0.15:3000
 - **Recurso** — acompanhamento do recurso/contestação aberto na plataforma (Mercado Livre).
 - **Saldão Parceiro** — produtos enviados para o parceiro de saldão.
 
-## Sobre o histórico importado
+## Onde ficam os dados
 
-Todo o histórico da planilha original foi importado (110 pedidos, 154 laudos, 151 recursos,
-2 registros de saldão). Durante a importação foram identificados:
+O banco de dados fica no **Turso** (banco na nuvem, separado do site), então os dados
+sobrevivem mesmo que o site reinicie ou saia do ar temporariamente. Pra fazer backup manual,
+entre no painel do Turso (app.turso.tech) → seu banco → **Export Database** → baixa um arquivo
+`.sqlite` com tudo.
 
-- **Registros "órfãos"**: alguns Laudos/Recursos/Saldão citam um Nº de Pedido que nunca foi
-  cadastrado no Registro Central (aconteceu na própria planilha original). Esses registros
-  aparecem marcados com a tag **"órfão"** nas listagens e são contados no aviso do Dashboard —
-  nada foi apagado, só sinalizado para vocês completarem o Registro Central quando quiserem.
-- **Um Nº de Pedido duplicado** (`2000013579181909`) tinha dois registros completamente
-  diferentes no Registro Central original — os dois foram mantidos.
+## Atualizando o código (se precisar mexer em algo no futuro)
 
-## Backup dos dados
+O código está em `https://github.com/APCOM-code/sistema-devolucao-ap-comercio`. Toda vez que o
+código lá for atualizado, entre no painel do Render → o serviço → **Manual Deploy** → **Deploy
+latest commit** (esse projeto usa deploy manual, não automático, porque foi conectado via
+"Public Git Repository").
 
-Todos os dados ficam em um único arquivo: `devolucoes.db` (nesta pasta). Para fazer backup,
-basta copiar esse arquivo (com o sistema fechado, para evitar copiar no meio de uma escrita).
-Recomendado copiar semanalmente para um pendrive ou nuvem (Google Drive, OneDrive etc.).
+## Sincronizar uma planilha atualizada
 
-## Requisitos técnicos
+Se um dia vocês exportarem a planilha do Google Sheets como `.xlsx` de novo e quiserem trazer
+pedidos novos/atualizados pro sistema, isso é feito localmente (não pelo site):
 
-- Node.js já vem instalado numa versão portátil em
-  `%LOCALAPPDATA%\nodejs-portable\` — não precisa instalar nada a mais.
-- Se quiser rodar em outro computador como servidor, instale o Node.js LTS
-  (https://nodejs.org) nele e copie esta pasta inteira para lá.
+1. Coloque o arquivo baixado em qualquer pasta.
+2. Rode `node server/import/parse_xlsx.js "caminho\para\o\arquivo.xlsx"`.
+3. Rode `node server/import/sync_from_xlsx.js`.
+
+O script só atualiza campos que mudaram (nunca deixa uma célula vazia apagar um dado que já
+existia) e avisa sobre datas ou valores suspeitos antes de aplicar qualquer coisa. Isso precisa
+rodar num computador com as variáveis `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` configuradas
+(peça pra quem fez a configuração original, se precisar).
+
+## Rodar localmente (modo offline, alternativa)
+
+Se algum dia quiser rodar sem depender da nuvem (ex: testar algo sem afetar os dados reais):
+
+1. Copie esta pasta para um computador com Node.js instalado (ou use a versão portátil em
+   `%LOCALAPPDATA%\nodejs-portable\`, se disponível).
+2. Rode `npm install` e depois `npm start` (ou dê dois cliques em `iniciar.bat`).
+3. Sem as variáveis `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` configuradas, o sistema cria
+   automaticamente um arquivo local `devolucoes.db` — **isso é um banco separado**, vazio,
+   não é o mesmo dos dados reais na nuvem.
+4. Acesse em `http://localhost:3000`.
+
+## Histórico importado
+
+Todo o histórico da planilha original foi importado e depois atualizado: 176 pedidos, 171
+laudos, 168 recursos, 2 registros de saldão (situação em 17/08/2026). Durante as importações
+foram identificados e tratados sem perda de dados:
+
+- **Registros "órfãos"**: Laudo/Recurso/Saldão que citam um Nº de Pedido sem registro
+  correspondente no Registro Central. Ficam marcados com a tag **"órfão"** nas listagens e
+  contados no aviso do Dashboard.
+- **Um Nº de Pedido duplicado** (`2000013579181909`) com dois registros diferentes no Registro
+  Central original — os dois foram mantidos.
+- Datas com erro de digitação na planilha (ex: ano digitado errado) foram deixadas em branco em
+  vez de importadas erradas — dá pra corrigir na tela do sistema quando quiser.
