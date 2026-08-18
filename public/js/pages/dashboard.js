@@ -30,7 +30,7 @@ const PaginaDashboard = (() => {
       </div>
       ${linhas
         .map((l) => {
-          const pct = (Math.abs(l.resultado) / max) * 50; // metade da largura = 100% do eixo
+          const pct = (Math.abs(l.resultado) / max) * 50;
           const positivo = l.resultado >= 0;
           return `
         <div class="bar-row">
@@ -49,11 +49,43 @@ const PaginaDashboard = (() => {
     `;
   }
 
+  const COR_CENARIO = {
+    'danificado|false': 'var(--critical)',
+    'danificado|true': 'var(--series-3)',
+    'bom|true': 'var(--good)',
+    'bom|false': 'var(--series-1)',
+    'desconhecido|false': 'var(--text-muted)',
+    'desconhecido|true': 'var(--text-muted)',
+  };
+
+  function painelCenarios(linhas) {
+    const max = Math.max(1, ...linhas.map((l) => l.quantidade));
+    return linhas
+      .map((l) => {
+        const cor = COR_CENARIO[`${l.categoria_condicao}|${l.reembolsado}`] || 'var(--text-muted)';
+        return `
+      <div class="bar-row">
+        <div class="rotulo" style="width:260px;">${l.cenario}</div>
+        <div class="trilho">
+          <svg width="100%" height="24" preserveAspectRatio="none" style="overflow:visible">
+            <rect x="0" y="0" width="${(l.quantidade / max) * 100}%" height="24" rx="4" fill="${cor}"></rect>
+          </svg>
+        </div>
+        <div class="valor">${l.quantidade}× · <span style="color:${l.resultado >= 0 ? 'var(--good-text)' : 'var(--critical)'}">${Util.moeda(l.resultado)}</span></div>
+      </div>`;
+      })
+      .join('');
+  }
+
   async function render(container) {
     const d = await Api.dashboard();
     const op = d.operacional;
     const fin = d.financeiro;
     const totalOrfaos = d.alertas.laudos_sem_pedido + d.alertas.recursos_sem_pedido + d.alertas.saldao_sem_pedido;
+
+    const prejuizoAbs = Math.abs(fin.prejuizo_real);
+    const cobertura = fin.cobertura_percentual;
+    const maxBarra = Math.max(prejuizoAbs, fin.ganho_compensatorio, 1);
 
     container.innerHTML = `
       <h1>Dashboard de Devoluções</h1>
@@ -67,6 +99,38 @@ const PaginaDashboard = (() => {
           : ''
       }
 
+      <div class="painel" style="border-color:var(--critical);">
+        <h2>Prejuízo real × Ganho compensatório</h2>
+        <p class="subtitulo" style="margin-top:-6px;">
+          Prejuízo real = produtos danificados que o Mercado Livre não reembolsou (perda total do custo).
+          Ganho compensatório = produtos que voltaram bons e ainda geraram reembolso (ganho duplo).
+        </p>
+        <div class="grid-tiles" style="margin-bottom:16px;">
+          ${tile('Prejuízo Real', Util.moeda(fin.prejuizo_real), 'critical')}
+          ${tile('Ganho Compensatório', Util.moeda(fin.ganho_compensatorio), 'good')}
+          ${tile('Cobertura', cobertura === null ? '—' : `${cobertura}%`, cobertura >= 100 ? 'good' : 'critical')}
+        </div>
+        <div class="bar-row">
+          <div class="rotulo">Prejuízo real</div>
+          <div class="trilho"><svg width="100%" height="24" style="overflow:visible"><rect width="${(prejuizoAbs / maxBarra) * 100}%" height="24" rx="4" fill="var(--critical)"></rect></svg></div>
+          <div class="valor">${Util.moeda(-prejuizoAbs)}</div>
+        </div>
+        <div class="bar-row">
+          <div class="rotulo">Ganho compensatório</div>
+          <div class="trilho"><svg width="100%" height="24" style="overflow:visible"><rect width="${(fin.ganho_compensatorio / maxBarra) * 100}%" height="24" rx="4" fill="var(--good)"></rect></svg></div>
+          <div class="valor">${Util.moeda(fin.ganho_compensatorio)}</div>
+        </div>
+        <p class="tag-line" style="margin-top:12px;font-size:13px;">
+          ${
+            cobertura === null
+              ? 'Sem prejuízo real registrado no momento.'
+              : cobertura >= 100
+              ? `O ganho compensatório <b>cobre todo o prejuízo real</b> (${cobertura}%).`
+              : `O ganho compensatório cobre <b>${cobertura}%</b> do prejuízo real — ainda falta ${Util.moeda(prejuizoAbs - fin.ganho_compensatorio)} pra empatar.`
+          }
+        </p>
+      </div>
+
       <h2>Operacional</h2>
       <div class="grid-tiles">
         ${tile('Total de Reclamações', op.total_reclamacoes)}
@@ -75,13 +139,17 @@ const PaginaDashboard = (() => {
         ${tile('Devoluções Recebidas', op.devolucoes_recebidas)}
       </div>
 
-      <h2>Financeiro</h2>
+      <h2>Financeiro geral</h2>
       <div class="grid-tiles">
         ${tile('Total Reembolso Recebido', Util.moeda(fin.total_reembolso_recebido))}
         ${tile('Total de Custos', Util.moeda(fin.total_custos))}
-        ${tile('Resultado Positivo', Util.moeda(fin.resultado_positivo), 'good')}
-        ${tile('Resultado Negativo', Util.moeda(fin.resultado_negativo), 'critical')}
         ${tile('Saldo Líquido Total', Util.moeda(fin.saldo_liquido_total), fin.saldo_liquido_total >= 0 ? 'good' : 'critical')}
+      </div>
+
+      <div class="painel">
+        <h2>Resultado por Cenário</h2>
+        <p class="subtitulo" style="margin-top:-6px;">Como cada pedido foi resolvido, e o que isso rendeu de verdade.</p>
+        ${painelCenarios(d.por_cenario)}
       </div>
 
       <div class="painel">

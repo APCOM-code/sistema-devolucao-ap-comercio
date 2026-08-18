@@ -87,6 +87,20 @@ const PaginaRegistroCentral = (() => {
     return `<span class="badge andamento">${status || 'Em andamento'}</span>`;
   }
 
+  const CENARIO_BADGE = {
+    'danificado|0': { texto: 'Perda total', classe: 'perda' },
+    'danificado|1': { texto: 'Recuperado no descarte', classe: 'recuperado' },
+    'bom|1': { texto: 'Ganho duplo', classe: 'ganho' },
+    'bom|0': { texto: 'Neutro', classe: 'neutro' },
+    'desconhecido|0': { texto: 'Sem laudo', classe: 'desconhecido' },
+    'desconhecido|1': { texto: 'Sem laudo', classe: 'desconhecido' },
+  };
+  function cenarioBadge(p) {
+    const chave = `${p.categoria_condicao}|${p.reembolsado ? 1 : 0}`;
+    const info = CENARIO_BADGE[chave] || { texto: '—', classe: 'desconhecido' };
+    return `<span class="badge cenario-${info.classe}">${info.texto}</span>`;
+  }
+
   async function carregarTabela(container) {
     const f = container.querySelector('#filtros');
     const params = {
@@ -105,7 +119,7 @@ const PaginaRegistroCentral = (() => {
       <div class="tabela-wrap"><table>
         <thead><tr>
           <th>Nº Pedido</th><th>Data</th><th>SKU</th><th>Motivo</th><th>Status</th><th>Destinação</th>
-          <th>Resultado (R$)</th><th>Responsável</th><th>Ações</th>
+          <th>Cenário</th><th>Resultado (R$)</th><th>Responsável</th><th>Ações</th>
         </tr></thead>
         <tbody>
           ${pedidos
@@ -117,6 +131,7 @@ const PaginaRegistroCentral = (() => {
               <td>${p.motivo || '—'}</td>
               <td>${statusBadge(p.status_geral)}</td>
               <td>${p.destinacao || '—'}</td>
+              <td>${cenarioBadge(p)}</td>
               <td class="num" style="color:${p.resultado_financeiro >= 0 ? 'var(--good-text)' : 'var(--critical)'}">${Util.moeda(p.resultado_financeiro)}</td>
               <td>${p.responsavel || '—'}</td>
               <td class="acoes">

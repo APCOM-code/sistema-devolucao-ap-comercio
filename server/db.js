@@ -86,6 +86,33 @@ CREATE TABLE IF NOT EXISTS saldao (
   updated_at TEXT DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_saldao_numero ON saldao(numero_pedido);
+
+-- View central do calculo financeiro. Um pedido so perde o custo do produto quando o
+-- laudo mais recente indica produto danificado (Regular/Ruim/Pessimo) -- produto em boa
+-- condicao (Perfeito/Bom) volta pro estoque e o custo NAO conta como prejuizo.
+-- Comissao/frete ficam como registrados manualmente pelos colaboradores (nao sao ajustados).
+DROP VIEW IF EXISTS pedidos_calc;
+CREATE VIEW pedidos_calc AS
+WITH laudo_recente AS (
+  SELECT numero_pedido, condicao_geral,
+         ROW_NUMBER() OVER (PARTITION BY numero_pedido ORDER BY id DESC) AS rn
+  FROM laudos
+)
+SELECT
+  p.*,
+  CASE
+    WHEN lr.condicao_geral IN ('Perfeito - como novo', 'Bom') THEN 'bom'
+    WHEN lr.condicao_geral IN ('Regular', 'Ruim', 'Péssimo - não funciona') THEN 'danificado'
+    ELSE 'desconhecido'
+  END AS categoria_condicao,
+  CASE WHEN COALESCE(p.reembolso_ml, 0) > 0 THEN 1 ELSE 0 END AS reembolsado,
+  ROUND(
+    COALESCE(p.reembolso_ml, 0)
+    - CASE WHEN lr.condicao_geral IN ('Perfeito - como novo', 'Bom') THEN 0 ELSE COALESCE(p.custo_produto, 0) END
+    - COALESCE(p.comissao_ml, 0) - COALESCE(p.frete_envio, 0) - COALESCE(p.frete_devolucao, 0)
+  , 2) AS resultado_financeiro
+FROM pedidos p
+LEFT JOIN laudo_recente lr ON lr.numero_pedido = p.numero_pedido AND lr.rn = 1;
 `;
 
 async function initSchema() {

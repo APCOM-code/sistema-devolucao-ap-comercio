@@ -183,6 +183,11 @@ td.acoes button { padding: 5px 10px; font-size: 12px; margin-right: 4px; }
 .badge.orfao { background: color-mix(in srgb, var(--warning) 20%, transparent); color: #8a5a00; border: 1px solid var(--warning); }
 .badge.encerrado { background: color-mix(in srgb, var(--good) 15%, transparent); color: var(--good-text); }
 .badge.andamento { background: color-mix(in srgb, var(--series-1) 15%, transparent); color: var(--series-1); }
+.badge.cenario-perda { background: color-mix(in srgb, var(--critical) 15%, transparent); color: var(--critical); }
+.badge.cenario-ganho { background: color-mix(in srgb, var(--good) 15%, transparent); color: var(--good-text); }
+.badge.cenario-recuperado { background: color-mix(in srgb, var(--series-3) 18%, transparent); color: var(--series-3); }
+.badge.cenario-neutro { background: color-mix(in srgb, var(--series-1) 12%, transparent); color: var(--series-1); }
+.badge.cenario-desconhecido { background: color-mix(in srgb, var(--text-muted) 15%, transparent); color: var(--text-muted); }
 
 /* ---- formulario (modal) ---- */
 .modal-fundo {

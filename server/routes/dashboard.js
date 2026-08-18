@@ -3,13 +3,6 @@ const { db } = require('../db');
 
 const router = express.Router();
 
-// Expressao SQL do resultado financeiro de cada pedido (mesma formula validada contra a
-// planilha original: reembolso ML - custo - comissao - frete envio - frete devolucao).
-const RESULTADO_SQL = `
-  (COALESCE(reembolso_ml,0) - COALESCE(custo_produto,0) - COALESCE(comissao_ml,0)
-   - COALESCE(frete_envio,0) - COALESCE(frete_devolucao,0))
-`;
-
 router.get('/', async (req, res) => {
   const operacionalR = await db.execute(
     `SELECT
@@ -17,25 +10,55 @@ router.get('/', async (req, res) => {
       SUM(CASE WHEN status_geral != 'Encerrado' OR status_geral IS NULL THEN 1 ELSE 0 END) AS em_andamento,
       SUM(CASE WHEN status_geral = 'Encerrado' THEN 1 ELSE 0 END) AS encerrados,
       SUM(CASE WHEN produto_recebido = 'Sim' THEN 1 ELSE 0 END) AS devolucoes_recebidas
-    FROM pedidos`
+    FROM pedidos_calc`
   );
 
   const financeiroR = await db.execute(
     `SELECT
       ROUND(SUM(COALESCE(reembolso_ml,0)), 2) AS total_reembolso_recebido,
       ROUND(SUM(COALESCE(custo_produto,0) + COALESCE(comissao_ml,0) + COALESCE(frete_envio,0) + COALESCE(frete_devolucao,0)), 2) AS total_custos,
-      ROUND(SUM(CASE WHEN ${RESULTADO_SQL} > 0 THEN ${RESULTADO_SQL} ELSE 0 END), 2) AS resultado_positivo,
-      ROUND(SUM(CASE WHEN ${RESULTADO_SQL} < 0 THEN ${RESULTADO_SQL} ELSE 0 END), 2) AS resultado_negativo,
-      ROUND(SUM(${RESULTADO_SQL}), 2) AS saldo_liquido_total
-    FROM pedidos`
+      ROUND(SUM(resultado_financeiro), 2) AS saldo_liquido_total,
+      ROUND(SUM(CASE WHEN categoria_condicao = 'danificado' AND reembolsado = 0 THEN resultado_financeiro ELSE 0 END), 2) AS prejuizo_real,
+      ROUND(SUM(CASE WHEN categoria_condicao = 'bom' AND reembolsado = 1 THEN resultado_financeiro ELSE 0 END), 2) AS ganho_compensatorio
+    FROM pedidos_calc`
   );
+
+  const fin = financeiroR.rows[0];
+  const prejuizoReal = Number(fin.prejuizo_real) || 0; // <= 0
+  const ganhoComp = Number(fin.ganho_compensatorio) || 0; // >= 0
+  const cobertura = prejuizoReal < 0 ? Math.round((ganhoComp / Math.abs(prejuizoReal)) * 1000) / 10 : null;
+
+  const porCenarioR = await db.execute(
+    `SELECT
+      CASE WHEN categoria_condicao = 'desconhecido' THEN 'desconhecido' ELSE categoria_condicao END AS categoria_condicao,
+      CASE WHEN categoria_condicao = 'desconhecido' THEN 0 ELSE reembolsado END AS reembolsado,
+      COUNT(*) AS quantidade, ROUND(SUM(resultado_financeiro), 2) AS resultado
+     FROM pedidos_calc
+     GROUP BY categoria_condicao = 'desconhecido', categoria_condicao, CASE WHEN categoria_condicao = 'desconhecido' THEN 0 ELSE reembolsado END
+     ORDER BY categoria_condicao, reembolsado`
+  );
+
+  const NOMES_CENARIO = {
+    'danificado|0': 'Perda total — danificado, sem reembolso',
+    'danificado|1': 'Recuperado no descarte — danificado, com reembolso',
+    'bom|1': 'Ganho duplo — produto bom, com reembolso',
+    'bom|0': 'Neutro — produto bom, custo volta pro estoque',
+    'desconhecido|0': 'Condição não avaliada (sem laudo)',
+  };
+  const porCenario = porCenarioR.rows.map((row) => ({
+    cenario: NOMES_CENARIO[`${row.categoria_condicao}|${row.reembolsado}`] || 'Outro',
+    categoria_condicao: row.categoria_condicao,
+    reembolsado: !!row.reembolsado,
+    quantidade: Number(row.quantidade),
+    resultado: Number(row.resultado),
+  }));
 
   const porDestinacaoR = await db.execute(
     `SELECT
       COALESCE(destinacao, '(sem destinacao)') AS destinacao,
       COUNT(*) AS quantidade,
-      ROUND(SUM(${RESULTADO_SQL}), 2) AS resultado
-    FROM pedidos
+      ROUND(SUM(resultado_financeiro), 2) AS resultado
+    FROM pedidos_calc
     GROUP BY destinacao
     ORDER BY quantidade DESC`
   );
@@ -52,7 +75,15 @@ router.get('/', async (req, res) => {
 
   res.json({
     operacional: operacionalR.rows[0],
-    financeiro: financeiroR.rows[0],
+    financeiro: {
+      total_reembolso_recebido: Number(fin.total_reembolso_recebido),
+      total_custos: Number(fin.total_custos),
+      saldo_liquido_total: Number(fin.saldo_liquido_total),
+      prejuizo_real: prejuizoReal,
+      ganho_compensatorio: ganhoComp,
+      cobertura_percentual: cobertura,
+    },
+    por_cenario: porCenario,
     por_destinacao: porDestinacaoR.rows,
     alertas: {
       laudos_sem_pedido: Number(orfaosLaudosR.rows[0].c),
