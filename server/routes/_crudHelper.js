@@ -5,13 +5,15 @@ const { db } = require('../db');
 // Router CRUD generico para tabelas filhas (laudos, recursos, saldao) que sempre
 // tem numero_pedido + um conjunto de campos proprios. Marca cada linha com
 // "orfao: true" quando o numero_pedido nao existe no Registro Central.
-// "Periodo" filtra pela data do Registro Central (pedidos.data) do pedido vinculado,
-// nao por uma data propria da tabela filha -- e a data em que a devolucao foi feita.
+// "Periodo" filtra pela Data de Abertura do Recurso do pedido vinculado (o campo de data
+// oficial do sistema) -- exceto na propria tabela recursos, que ja tem esse campo e filtra
+// direto nele, passado via opcoes.dataProprio.
 function createCrudRouter(tabela, campos, opcoes = {}) {
   const router = express.Router();
   const colunas = ['numero_pedido', ...campos];
   const colunasExport = opcoes.colunasExport || colunas.map((c) => [c, c]);
   const nomeExport = opcoes.nomeExport || tabela;
+  const dataProprio = opcoes.dataProprio || null;
 
   async function comOrfao(row) {
     if (!row) return row;
@@ -21,24 +23,26 @@ function createCrudRouter(tabela, campos, opcoes = {}) {
 
   function montaFiltro(query) {
     const { numero_pedido, data_inicio, data_fim } = query;
-    const precisaJoin = !!(data_inicio || data_fim);
+    const precisaFiltroData = !!(data_inicio || data_fim);
+    const precisaJoin = precisaFiltroData && !dataProprio;
+    const colunaData = dataProprio ? `t.${dataProprio}` : 'p.data_abertura_recurso';
     let sql = precisaJoin
-      ? `SELECT t.* FROM ${tabela} t LEFT JOIN pedidos p ON p.numero_pedido = t.numero_pedido WHERE 1=1`
-      : `SELECT * FROM ${tabela} WHERE 1=1`;
+      ? `SELECT t.* FROM ${tabela} t LEFT JOIN pedidos_calc p ON p.numero_pedido = t.numero_pedido WHERE 1=1`
+      : `SELECT * FROM ${tabela} t WHERE 1=1`;
     const args = [];
     if (numero_pedido) {
-      sql += ` AND ${precisaJoin ? 't.' : ''}numero_pedido = ?`;
+      sql += ' AND t.numero_pedido = ?';
       args.push(numero_pedido);
     }
     if (data_inicio) {
-      sql += ' AND p.data >= ?';
+      sql += ` AND ${colunaData} >= ?`;
       args.push(data_inicio);
     }
     if (data_fim) {
-      sql += ' AND p.data <= ?';
+      sql += ` AND ${colunaData} <= ?`;
       args.push(data_fim);
     }
-    sql += ` ORDER BY ${precisaJoin ? 't.' : ''}id DESC`;
+    sql += ' ORDER BY t.id DESC';
     return { sql, args };
   }
 

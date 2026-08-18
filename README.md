@@ -30,10 +30,16 @@ acesso depois disso demora uns 30-50 segundos pra "acordar" — depois disso fic
 
 ## Filtro por período e exportar Excel
 
-Registro Central, Laudo, Recurso e Saldão têm filtro **De / Até** por data (a data do Registro
-Central — quando a devolução foi feita), e um botão **Exportar Excel** que baixa exatamente o
-que está filtrado na tela. Isso é pensado pra acompanhar meta por funcionário: filtra por
-período (e por Responsável, no Registro Central) e exporta pra conferir depois.
+Registro Central, Laudo, Recurso e Saldão têm filtro **De / Até** por data, e um botão
+**Exportar Excel** que baixa exatamente o que está filtrado na tela. Isso é pensado pra
+acompanhar meta por funcionário: filtra por período (e por Responsável, no Registro Central) e
+exporta pra conferir depois.
+
+A data usada em todo esse filtro é a **Data de Abertura do Recurso** (preenchida na aba
+Recurso — o dia em que o funcionário abriu a mediação/contestação daquela devolução), não a
+data antiga de "quando a devolução foi feita". O Registro Central mostra essa data (coluna
+"Abertura Recurso") em vez de pedir uma data própria — um pedido só aparece com data depois que
+um recurso for aberto pra ele na aba Recurso.
 
 O Dashboard também tem filtro de período no topo, que recalcula todos os números pro intervalo
 escolhido. **Todo número do Dashboard é clicável** — clicar leva direto pro Registro Central já

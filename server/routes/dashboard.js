@@ -8,11 +8,11 @@ router.get('/', async (req, res) => {
   let filtroSql = 'WHERE 1=1';
   const filtroArgs = [];
   if (data_inicio) {
-    filtroSql += ' AND data >= ?';
+    filtroSql += ' AND data_abertura_recurso >= ?';
     filtroArgs.push(data_inicio);
   }
   if (data_fim) {
-    filtroSql += ' AND data <= ?';
+    filtroSql += ' AND data_abertura_recurso <= ?';
     filtroArgs.push(data_fim);
   }
 

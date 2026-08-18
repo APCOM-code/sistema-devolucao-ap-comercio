@@ -96,6 +96,9 @@ CREATE INDEX IF NOT EXISTS idx_saldao_numero ON saldao(numero_pedido);
 // cancela os dois em qualquer devolucao) -- NAO entram na conta do resultado. Frete Devolucao
 // e Custo de Componentes (comprados pra completar um pedido que chegou incompleto) sao custos
 // reais e sempre contam, independente da condicao do produto.
+// data_abertura_recurso = data do PRIMEIRO recurso aberto pra aquele pedido -- e o campo usado
+// em toda a interface e nos filtros de periodo (substitui pedidos.data, que fica preservado no
+// banco por historico mas nao aparece mais em lugar nenhum).
 const SCHEMA_VIEW = `
 DROP VIEW IF EXISTS pedidos_calc;
 CREATE VIEW pedidos_calc AS
@@ -103,9 +106,16 @@ WITH laudo_recente AS (
   SELECT numero_pedido, condicao_geral,
          ROW_NUMBER() OVER (PARTITION BY numero_pedido ORDER BY id DESC) AS rn
   FROM laudos
+),
+recurso_primeiro AS (
+  SELECT numero_pedido, MIN(data_abertura) AS data_abertura_recurso
+  FROM recursos
+  WHERE data_abertura IS NOT NULL
+  GROUP BY numero_pedido
 )
 SELECT
   p.*,
+  rp.data_abertura_recurso,
   CASE
     WHEN lr.condicao_geral IN ('Perfeito - como novo', 'Bom') THEN 'bom'
     WHEN lr.condicao_geral IN ('Regular', 'Ruim', 'Péssimo - não funciona') THEN 'danificado'
@@ -119,7 +129,8 @@ SELECT
     - COALESCE(p.custo_componentes, 0)
   , 2) AS resultado_financeiro
 FROM pedidos p
-LEFT JOIN laudo_recente lr ON lr.numero_pedido = p.numero_pedido AND lr.rn = 1;
+LEFT JOIN laudo_recente lr ON lr.numero_pedido = p.numero_pedido AND lr.rn = 1
+LEFT JOIN recurso_primeiro rp ON rp.numero_pedido = p.numero_pedido;
 `;
 
 // Colunas novas em banco que ja existia antes delas (local ou Turso ja criados sem a coluna).

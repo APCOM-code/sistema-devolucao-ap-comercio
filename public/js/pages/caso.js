@@ -99,7 +99,6 @@ const PaginaCaso = (() => {
   }
 
   const CAMPOS_PEDIDO = [
-    { nome: 'data', label: 'Data', tipo: 'date' },
     { nome: 'plataforma', label: 'Plataforma', tipo: 'text' },
     { nome: 'tipo_envio', label: 'Tipo Envio', tipo: 'text' },
     { nome: 'produto_sku', label: 'Produto/SKU', tipo: 'text' },
@@ -127,6 +126,7 @@ const PaginaCaso = (() => {
     } else {
       area.innerHTML = `
         <div class="grid-tiles" style="margin-bottom:14px;">
+          <div class="tile"><div class="label">Abertura do Recurso</div><div class="value" style="font-size:15px;">${registro.data_abertura_recurso ? Util.dataBr(registro.data_abertura_recurso) : 'Ainda não aberto'}</div></div>
           <div class="tile"><div class="label">Cenário</div><div class="value" style="font-size:15px;">${registro.categoria_condicao || '—'} ${registro.reembolsado ? '· reembolsado' : ''}</div></div>
           <div class="tile"><div class="label">Resultado Financeiro</div><div class="value" style="font-size:20px;color:${registro.resultado_financeiro >= 0 ? 'var(--good-text)' : 'var(--critical)'}">${Util.moeda(registro.resultado_financeiro)}</div></div>
         </div>

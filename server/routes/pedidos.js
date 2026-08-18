@@ -4,8 +4,11 @@ const { db } = require('../db');
 
 const router = express.Router();
 
+// "data" (data da devolucao) nao faz mais parte do formulario -- o campo de data usado em
+// toda a interface agora e data_abertura_recurso (calculado na view, a partir do Recurso).
+// A coluna "data" continua existindo no banco por historico, so nao e mais editavel aqui.
 const CAMPOS = [
-  'numero_pedido', 'data', 'plataforma', 'tipo_envio', 'produto_sku', 'motivo',
+  'numero_pedido', 'plataforma', 'tipo_envio', 'produto_sku', 'motivo',
   'contestacao', 'resultado_contestacao', 'produto_recebido', 'status_geral',
   'destinacao', 'valor_venda', 'reembolso_ml', 'custo_produto', 'comissao_ml',
   'frete_envio', 'frete_devolucao', 'custo_componentes', 'responsavel', 'obs',
@@ -40,18 +43,18 @@ function montaFiltro(query) {
     args.push(produto_recebido);
   }
   if (data_inicio) {
-    sql += ' AND data >= ?';
+    sql += ' AND data_abertura_recurso >= ?';
     args.push(data_inicio);
   }
   if (data_fim) {
-    sql += ' AND data <= ?';
+    sql += ' AND data_abertura_recurso <= ?';
     args.push(data_fim);
   }
   if (q) {
     sql += ' AND (numero_pedido LIKE ? OR produto_sku LIKE ? OR obs LIKE ?)';
     args.push(`%${q}%`, `%${q}%`, `%${q}%`);
   }
-  sql += ' ORDER BY data DESC, id DESC';
+  sql += ' ORDER BY data_abertura_recurso DESC, id DESC';
   return { sql, args };
 }
 
@@ -62,7 +65,7 @@ router.get('/', async (req, res) => {
 });
 
 const COLUNAS_EXPORT = [
-  ['numero_pedido', 'Nº Pedido'], ['data', 'Data'], ['plataforma', 'Plataforma'],
+  ['numero_pedido', 'Nº Pedido'], ['data_abertura_recurso', 'Abertura Recurso'], ['plataforma', 'Plataforma'],
   ['tipo_envio', 'Tipo Envio'], ['produto_sku', 'Produto/SKU'], ['motivo', 'Motivo'],
   ['status_geral', 'Status'], ['destinacao', 'Destinação'], ['categoria_condicao', 'Cenário'],
   ['valor_venda', 'Valor Venda'], ['reembolso_ml', 'Reembolso ML'], ['custo_produto', 'Custo Produto'],

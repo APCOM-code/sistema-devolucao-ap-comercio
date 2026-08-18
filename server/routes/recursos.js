@@ -12,6 +12,7 @@ module.exports = createCrudRouter(
     'obs',
   ],
   {
+    dataProprio: 'data_abertura',
     nomeExport: 'Recurso',
     colunasExport: [
       ['numero_pedido', 'Nº Pedido'],

@@ -18,7 +18,7 @@ const PaginaRegistroCentral = (() => {
       <form id="form-pedido">
         <div class="form-grid">
           <div class="campo"><label>Nº do Pedido</label><input name="numero_pedido" value="${g('numero_pedido')}" required /></div>
-          <div class="campo"><label>Data</label><input type="date" name="data" value="${g('data')}" /></div>
+          <div class="campo"><label>Abertura do Recurso</label><input type="text" value="${g('data_abertura_recurso') ? Util.dataBr(g('data_abertura_recurso')) : 'Preencha na aba Recurso'}" disabled title="Esse campo vem da aba Recurso — não é editável aqui." /></div>
           <div class="campo"><label>Plataforma</label><input name="plataforma" value="${g('plataforma') || 'Mercado Livre'}" /></div>
           <div class="campo"><label>Tipo Envio</label><input name="tipo_envio" value="${g('tipo_envio') || 'Full'}" /></div>
           <div class="campo"><label>Produto/SKU</label><input name="produto_sku" value="${g('produto_sku')}" /></div>
@@ -133,7 +133,7 @@ const PaginaRegistroCentral = (() => {
     area.innerHTML = `
       <div class="tabela-wrap"><table>
         <thead><tr>
-          <th>Nº Pedido</th><th>Data</th><th>SKU</th><th>Motivo</th><th>Status</th><th>Destinação</th>
+          <th>Nº Pedido</th><th>Abertura Recurso</th><th>SKU</th><th>Motivo</th><th>Status</th><th>Destinação</th>
           <th>Cenário</th><th>Resultado (R$)</th><th>Responsável</th><th>Ações</th>
         </tr></thead>
         <tbody>
@@ -141,7 +141,7 @@ const PaginaRegistroCentral = (() => {
             .map(
               (p) => `<tr data-id="${p.id}">
               <td><a href="#caso/${encodeURIComponent(p.numero_pedido)}">${p.numero_pedido}</a></td>
-              <td>${Util.dataBr(p.data)}</td>
+              <td>${p.data_abertura_recurso ? Util.dataBr(p.data_abertura_recurso) : '—'}</td>
               <td>${p.produto_sku || '—'}</td>
               <td>${p.motivo || '—'}</td>
               <td>${statusBadge(p.status_geral)}</td>
@@ -197,8 +197,8 @@ const PaginaRegistroCentral = (() => {
         <select name="destinacao"><option value="">Destinação: todas</option>${DESTINACOES.map((d) => `<option value="${d}" ${query.destinacao === d ? 'selected' : ''}>${d}</option>`).join('')}</select>
         <select name="cenario"><option value="">Cenário: todos</option>${CENARIO_OPCOES.map(([v, t]) => `<option value="${v}" ${(query.categoria_condicao && `${query.categoria_condicao}|${query.reembolsado || '0'}` === v) || query.categoria_condicao === v ? 'selected' : ''}>${t}</option>`).join('')}</select>
         <select name="responsavel"><option value="">Responsável: todos</option>${responsaveis.map((r) => `<option value="${r.nome}" ${query.responsavel === r.nome ? 'selected' : ''}>${r.nome}</option>`).join('')}</select>
-        <label style="font-size:12px;color:var(--text-secondary);">De <input type="date" name="data_inicio" value="${query.data_inicio || ''}" style="width:auto;" /></label>
-        <label style="font-size:12px;color:var(--text-secondary);">Até <input type="date" name="data_fim" value="${query.data_fim || ''}" style="width:auto;" /></label>
+        <label style="font-size:12px;color:var(--text-secondary);" title="Filtra pela Data de Abertura do Recurso">Abertura Recurso de <input type="date" name="data_inicio" value="${query.data_inicio || ''}" style="width:auto;" /></label>
+        <label style="font-size:12px;color:var(--text-secondary);">até <input type="date" name="data_fim" value="${query.data_fim || ''}" style="width:auto;" /></label>
         <div class="spacer"></div>
         <button class="secundario" id="btn-exportar">⬇ Exportar Excel</button>
         <button id="btn-novo">+ Novo Pedido</button>
