@@ -112,6 +112,12 @@ h2 { font-size: 15px; margin: 0 0 12px; color: var(--text-secondary); font-weigh
 .tile .value { font-size: 26px; font-weight: 600; font-variant-numeric: proportional-nums; }
 .tile .value.good { color: var(--good-text); }
 .tile .value.critical { color: var(--critical); }
+.tile-link { display: block; text-decoration: none; color: inherit; transition: border-color 0.15s, transform 0.1s; }
+.tile-link:hover { border-color: var(--series-1); transform: translateY(-1px); }
+
+.bar-row-link { text-decoration: none; color: inherit; border-radius: 6px; cursor: pointer; }
+.bar-row-link:hover { background: var(--surface-2); }
+.bar-row-link:hover .rotulo { color: var(--series-1); }
 
 .painel {
   background: var(--surface-1);

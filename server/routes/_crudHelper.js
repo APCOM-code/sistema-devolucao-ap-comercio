@@ -1,12 +1,17 @@
 const express = require('express');
+const XLSX = require('xlsx');
 const { db } = require('../db');
 
 // Router CRUD generico para tabelas filhas (laudos, recursos, saldao) que sempre
 // tem numero_pedido + um conjunto de campos proprios. Marca cada linha com
 // "orfao: true" quando o numero_pedido nao existe no Registro Central.
-function createCrudRouter(tabela, campos) {
+// "Periodo" filtra pela data do Registro Central (pedidos.data) do pedido vinculado,
+// nao por uma data propria da tabela filha -- e a data em que a devolucao foi feita.
+function createCrudRouter(tabela, campos, opcoes = {}) {
   const router = express.Router();
   const colunas = ['numero_pedido', ...campos];
+  const colunasExport = opcoes.colunasExport || colunas.map((c) => [c, c]);
+  const nomeExport = opcoes.nomeExport || tabela;
 
   async function comOrfao(row) {
     if (!row) return row;
@@ -14,17 +19,50 @@ function createCrudRouter(tabela, campos) {
     return { ...row, orfao: r.rows.length === 0 };
   }
 
-  router.get('/', async (req, res) => {
-    const { numero_pedido } = req.query;
-    let sql = `SELECT * FROM ${tabela} WHERE 1=1`;
+  function montaFiltro(query) {
+    const { numero_pedido, data_inicio, data_fim } = query;
+    const precisaJoin = !!(data_inicio || data_fim);
+    let sql = precisaJoin
+      ? `SELECT t.* FROM ${tabela} t LEFT JOIN pedidos p ON p.numero_pedido = t.numero_pedido WHERE 1=1`
+      : `SELECT * FROM ${tabela} WHERE 1=1`;
     const args = [];
     if (numero_pedido) {
-      sql += ' AND numero_pedido = ?';
+      sql += ` AND ${precisaJoin ? 't.' : ''}numero_pedido = ?`;
       args.push(numero_pedido);
     }
-    sql += ' ORDER BY id DESC';
+    if (data_inicio) {
+      sql += ' AND p.data >= ?';
+      args.push(data_inicio);
+    }
+    if (data_fim) {
+      sql += ' AND p.data <= ?';
+      args.push(data_fim);
+    }
+    sql += ` ORDER BY ${precisaJoin ? 't.' : ''}id DESC`;
+    return { sql, args };
+  }
+
+  router.get('/', async (req, res) => {
+    const { sql, args } = montaFiltro(req.query);
     const r = await db.execute({ sql, args });
     res.json(await Promise.all(r.rows.map(comOrfao)));
+  });
+
+  router.get('/exportar', async (req, res) => {
+    const { sql, args } = montaFiltro(req.query);
+    const r = await db.execute({ sql, args });
+    const linhas = r.rows.map((row) => {
+      const obj = {};
+      for (const [campo, titulo] of colunasExport) obj[titulo] = row[campo] ?? '';
+      return obj;
+    });
+    const planilha = XLSX.utils.json_to_sheet(linhas);
+    const livro = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(livro, planilha, nomeExport.slice(0, 31));
+    const buffer = XLSX.write(livro, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${tabela}_${Date.now()}.xlsx"`);
+    res.send(buffer);
   });
 
   router.get('/:id', async (req, res) => {

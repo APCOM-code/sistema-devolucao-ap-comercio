@@ -1,4 +1,5 @@
 const express = require('express');
+const XLSX = require('xlsx');
 const { db } = require('../db');
 
 const router = express.Router();
@@ -10,8 +11,8 @@ const CAMPOS = [
   'frete_envio', 'frete_devolucao', 'custo_componentes', 'responsavel', 'obs',
 ];
 
-router.get('/', async (req, res) => {
-  const { status_geral, destinacao, responsavel, data_inicio, data_fim, q } = req.query;
+function montaFiltro(query) {
+  const { status_geral, destinacao, responsavel, data_inicio, data_fim, q, categoria_condicao, reembolsado, produto_recebido } = query;
   let sql = 'SELECT * FROM pedidos_calc WHERE 1=1';
   const args = [];
   if (status_geral) {
@@ -26,6 +27,18 @@ router.get('/', async (req, res) => {
     sql += ' AND responsavel = ?';
     args.push(responsavel);
   }
+  if (categoria_condicao) {
+    sql += ' AND categoria_condicao = ?';
+    args.push(categoria_condicao);
+  }
+  if (reembolsado === '0' || reembolsado === '1') {
+    sql += ' AND reembolsado = ?';
+    args.push(Number(reembolsado));
+  }
+  if (produto_recebido) {
+    sql += ' AND produto_recebido = ?';
+    args.push(produto_recebido);
+  }
   if (data_inicio) {
     sql += ' AND data >= ?';
     args.push(data_inicio);
@@ -39,8 +52,41 @@ router.get('/', async (req, res) => {
     args.push(`%${q}%`, `%${q}%`, `%${q}%`);
   }
   sql += ' ORDER BY data DESC, id DESC';
+  return { sql, args };
+}
+
+router.get('/', async (req, res) => {
+  const { sql, args } = montaFiltro(req.query);
   const r = await db.execute({ sql, args });
   res.json(r.rows);
+});
+
+const COLUNAS_EXPORT = [
+  ['numero_pedido', 'Nº Pedido'], ['data', 'Data'], ['plataforma', 'Plataforma'],
+  ['tipo_envio', 'Tipo Envio'], ['produto_sku', 'Produto/SKU'], ['motivo', 'Motivo'],
+  ['status_geral', 'Status'], ['destinacao', 'Destinação'], ['categoria_condicao', 'Cenário'],
+  ['valor_venda', 'Valor Venda'], ['reembolso_ml', 'Reembolso ML'], ['custo_produto', 'Custo Produto'],
+  ['frete_devolucao', 'Frete Devolução'], ['custo_componentes', 'Custo Componentes'],
+  ['resultado_financeiro', 'Resultado Financeiro'], ['responsavel', 'Responsável'], ['obs', 'Obs.'],
+];
+
+router.get('/exportar', async (req, res) => {
+  const { sql, args } = montaFiltro(req.query);
+  const r = await db.execute({ sql, args });
+
+  const linhas = r.rows.map((row) => {
+    const obj = {};
+    for (const [campo, titulo] of COLUNAS_EXPORT) obj[titulo] = row[campo] ?? '';
+    return obj;
+  });
+  const planilha = XLSX.utils.json_to_sheet(linhas);
+  const livro = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(livro, planilha, 'Registro Central');
+  const buffer = XLSX.write(livro, { type: 'buffer', bookType: 'xlsx' });
+
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="registro_central_${Date.now()}.xlsx"`);
+  res.send(buffer);
 });
 
 // Lookup por numero de pedido (usado pelo autopreenchimento nas outras abas).

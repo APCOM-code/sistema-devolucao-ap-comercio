@@ -103,27 +103,46 @@ function criarPaginaFilha(cfg) {
     });
   }
 
-  async function render(container) {
+  function lerFiltros(container) {
+    return {
+      numero_pedido: container.querySelector('#filtro-numero').value.trim(),
+      data_inicio: container.querySelector('#filtro-data-inicio').value,
+      data_fim: container.querySelector('#filtro-data-fim').value,
+    };
+  }
+
+  function exportarExcel(container) {
+    const filtros = lerFiltros(container);
+    const qs = new URLSearchParams(Object.entries(filtros).filter(([, v]) => v !== '' && v != null));
+    window.location.href = `/api/${cfg.recurso}/exportar?${qs}`;
+  }
+
+  async function render(container, _param, query = {}) {
     container.innerHTML = `
       <h1>${cfg.titulo}</h1>
       <p class="subtitulo">${cfg.subtitulo}</p>
       <div class="toolbar">
-        <input type="text" id="filtro-numero" placeholder="Filtrar por Nº do Pedido..." />
+        <input type="text" id="filtro-numero" placeholder="Filtrar por Nº do Pedido..." value="${query.numero_pedido || ''}" />
+        <label style="font-size:12px;color:var(--text-secondary);">Período de <input type="date" id="filtro-data-inicio" value="${query.data_inicio || ''}" style="width:auto;" /></label>
+        <label style="font-size:12px;color:var(--text-secondary);">até <input type="date" id="filtro-data-fim" value="${query.data_fim || ''}" style="width:auto;" /></label>
         <div class="spacer"></div>
+        <button class="secundario" id="btn-exportar">⬇ Exportar Excel</button>
         <button id="btn-novo">+ Novo</button>
       </div>
       <div id="tabela-area"></div>
     `;
     container.querySelector('#btn-novo').addEventListener('click', () => abrirFormulario(container, null));
-    const filtroInput = container.querySelector('#filtro-numero');
-    filtroInput.addEventListener('input', Util.debounce(() => carregarTabela(container), 300));
+    container.querySelector('#btn-exportar').addEventListener('click', () => exportarExcel(container));
+    ['#filtro-numero', '#filtro-data-inicio', '#filtro-data-fim'].forEach((sel) => {
+      container.querySelector(sel).addEventListener('input', Util.debounce(() => carregarTabela(container), 300));
+    });
     await carregarTabela(container);
   }
 
   async function carregarTabela(container) {
-    const numero = container.querySelector('#filtro-numero').value.trim();
+    const filtros = lerFiltros(container);
     const area = container.querySelector('#tabela-area');
-    const registros = await Api.listar(cfg.recurso, numero ? { numero_pedido: numero } : {});
+    const registros = await Api.listar(cfg.recurso, filtros);
     if (registros.length === 0) {
       area.innerHTML = `<div class="vazio">Nenhum registro ainda.</div>`;
       return;

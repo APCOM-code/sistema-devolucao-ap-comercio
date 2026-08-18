@@ -33,8 +33,10 @@ const Api = {
   lookupPedido(numero) {
     return this._req('GET', `/api/pedidos/lookup/${encodeURIComponent(numero)}`);
   },
-  dashboard() {
-    return this._req('GET', '/api/dashboard');
+  dashboard(params = {}) {
+    const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== '' && v != null));
+    const sufixo = qs.toString() ? `?${qs}` : '';
+    return this._req('GET', `/api/dashboard${sufixo}`);
   },
   pendencias() {
     return this._req('GET', '/api/pendencias');

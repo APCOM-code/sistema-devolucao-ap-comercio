@@ -1,6 +1,17 @@
 const PaginaDashboard = (() => {
-  function tile(label, value, cls = '') {
-    return `<div class="tile"><div class="label">${label}</div><div class="value ${cls}">${value}</div></div>`;
+  let periodo = { data_inicio: '', data_fim: '' };
+
+  function linkRegistro(extra = {}) {
+    const params = { ...periodo, ...extra };
+    const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== '' && v != null));
+    return `#registro?${qs}`;
+  }
+
+  function tile(label, value, cls = '', href = null) {
+    const conteudo = `<div class="label">${label}</div><div class="value ${cls}">${value}</div>`;
+    return href
+      ? `<a class="tile tile-link" href="${href}">${conteudo}</a>`
+      : `<div class="tile">${conteudo}</div>`;
   }
 
   function barraSimples(linhas, corVar) {
@@ -8,7 +19,7 @@ const PaginaDashboard = (() => {
     return linhas
       .map(
         (l) => `
-      <div class="bar-row">
+      <a class="bar-row bar-row-link" href="${linkRegistro({ destinacao: l.destinacao.startsWith('(') ? '' : l.destinacao })}">
         <div class="rotulo">${l.destinacao}</div>
         <div class="trilho">
           <svg width="100%" height="24" preserveAspectRatio="none" style="overflow:visible">
@@ -16,7 +27,7 @@ const PaginaDashboard = (() => {
           </svg>
         </div>
         <div class="valor">${l.quantidade}</div>
-      </div>`
+      </a>`
       )
       .join('');
   }
@@ -33,7 +44,7 @@ const PaginaDashboard = (() => {
           const pct = (Math.abs(l.resultado) / max) * 50;
           const positivo = l.resultado >= 0;
           return `
-        <div class="bar-row">
+        <a class="bar-row bar-row-link" href="${linkRegistro({ destinacao: l.destinacao.startsWith('(') ? '' : l.destinacao })}">
           <div class="rotulo">${l.destinacao}</div>
           <div class="trilho">
             <svg width="100%" height="24" preserveAspectRatio="none" style="overflow:visible">
@@ -43,7 +54,7 @@ const PaginaDashboard = (() => {
             </svg>
           </div>
           <div class="valor" style="color:${positivo ? 'var(--good-text)' : 'var(--critical)'}">${Util.moeda(l.resultado)}</div>
-        </div>`;
+        </a>`;
         })
         .join('')}
     `;
@@ -63,8 +74,9 @@ const PaginaDashboard = (() => {
     return linhas
       .map((l) => {
         const cor = COR_CENARIO[`${l.categoria_condicao}|${l.reembolsado}`] || 'var(--text-muted)';
+        const filtroCenario = l.categoria_condicao === 'desconhecido' ? { categoria_condicao: 'desconhecido' } : { categoria_condicao: l.categoria_condicao, reembolsado: l.reembolsado ? '1' : '0' };
         return `
-      <div class="bar-row">
+      <a class="bar-row bar-row-link" href="${linkRegistro(filtroCenario)}">
         <div class="rotulo" style="width:260px;">${l.cenario}</div>
         <div class="trilho">
           <svg width="100%" height="24" preserveAspectRatio="none" style="overflow:visible">
@@ -72,7 +84,7 @@ const PaginaDashboard = (() => {
           </svg>
         </div>
         <div class="valor">${l.quantidade}× · <span style="color:${l.resultado >= 0 ? 'var(--good-text)' : 'var(--critical)'}">${Util.moeda(l.resultado)}</span></div>
-      </div>`;
+      </a>`;
       })
       .join('');
   }
@@ -103,8 +115,8 @@ const PaginaDashboard = (() => {
       </div>`;
   }
 
-  async function render(container) {
-    const [d, pend] = await Promise.all([Api.dashboard(), Api.pendencias()]);
+  async function carregarDados(container) {
+    const [d, pend] = await Promise.all([Api.dashboard(periodo), Api.pendencias()]);
     const op = d.operacional;
     const fin = d.financeiro;
     const totalOrfaos = d.alertas.laudos_sem_pedido + d.alertas.recursos_sem_pedido + d.alertas.saldao_sem_pedido;
@@ -113,10 +125,7 @@ const PaginaDashboard = (() => {
     const cobertura = fin.cobertura_percentual;
     const maxBarra = Math.max(prejuizoAbs, fin.ganho_compensatorio, 1);
 
-    container.innerHTML = `
-      <h1>Dashboard de Devoluções</h1>
-      <p class="subtitulo">Pós-vendas e devolução — visão geral de todos os registros.</p>
-
+    container.querySelector('#dashboard-corpo').innerHTML = `
       ${painelPendencias(pend)}
 
       ${
@@ -132,10 +141,11 @@ const PaginaDashboard = (() => {
         <p class="subtitulo" style="margin-top:-6px;">
           Prejuízo real = produtos danificados que o Mercado Livre não reembolsou (perda total do custo).
           Ganho compensatório = produtos que voltaram bons e ainda geraram reembolso (ganho duplo).
+          Clique num número pra ver as vendas por trás dele.
         </p>
         <div class="grid-tiles" style="margin-bottom:16px;">
-          ${tile('Prejuízo Real', Util.moeda(fin.prejuizo_real), 'critical')}
-          ${tile('Ganho Compensatório', Util.moeda(fin.ganho_compensatorio), 'good')}
+          ${tile('Prejuízo Real', Util.moeda(fin.prejuizo_real), 'critical', linkRegistro({ categoria_condicao: 'danificado', reembolsado: '0' }))}
+          ${tile('Ganho Compensatório', Util.moeda(fin.ganho_compensatorio), 'good', linkRegistro({ categoria_condicao: 'bom', reembolsado: '1' }))}
           ${tile('Cobertura', cobertura === null ? '—' : `${cobertura}%`, cobertura >= 100 ? 'good' : 'critical')}
         </div>
         <div class="bar-row">
@@ -161,22 +171,22 @@ const PaginaDashboard = (() => {
 
       <h2>Operacional</h2>
       <div class="grid-tiles">
-        ${tile('Total de Reclamações', op.total_reclamacoes)}
-        ${tile('Em Andamento', op.em_andamento)}
-        ${tile('Encerrados', op.encerrados)}
-        ${tile('Devoluções Recebidas', op.devolucoes_recebidas)}
+        ${tile('Total de Reclamações', op.total_reclamacoes, '', linkRegistro())}
+        ${tile('Em Andamento', op.em_andamento, '', linkRegistro({ status_geral: 'Em andamento' }))}
+        ${tile('Encerrados', op.encerrados, '', linkRegistro({ status_geral: 'Encerrado' }))}
+        ${tile('Devoluções Recebidas', op.devolucoes_recebidas, '', linkRegistro({ produto_recebido: 'Sim' }))}
       </div>
 
       <h2>Financeiro geral</h2>
       <div class="grid-tiles">
-        ${tile('Total Reembolso Recebido', Util.moeda(fin.total_reembolso_recebido))}
-        ${tile('Total de Custos', Util.moeda(fin.total_custos))}
-        ${tile('Saldo Líquido Total', Util.moeda(fin.saldo_liquido_total), fin.saldo_liquido_total >= 0 ? 'good' : 'critical')}
+        ${tile('Total Reembolso Recebido', Util.moeda(fin.total_reembolso_recebido), '', linkRegistro())}
+        ${tile('Total de Custos', Util.moeda(fin.total_custos), '', linkRegistro())}
+        ${tile('Saldo Líquido Total', Util.moeda(fin.saldo_liquido_total), fin.saldo_liquido_total >= 0 ? 'good' : 'critical', linkRegistro())}
       </div>
 
       <div class="painel">
         <h2>Resultado por Cenário</h2>
-        <p class="subtitulo" style="margin-top:-6px;">Como cada pedido foi resolvido, e o que isso rendeu de verdade.</p>
+        <p class="subtitulo" style="margin-top:-6px;">Como cada pedido foi resolvido, e o que isso rendeu de verdade. Clique pra ver os pedidos.</p>
         ${painelCenarios(d.por_cenario)}
       </div>
 
@@ -190,6 +200,39 @@ const PaginaDashboard = (() => {
         ${barraDivergente(d.por_destinacao)}
       </div>
     `;
+  }
+
+  async function render(container) {
+    container.innerHTML = `
+      <h1>Dashboard de Devoluções</h1>
+      <p class="subtitulo">Pós-vendas e devolução — visão geral de todos os registros.</p>
+      <div class="toolbar">
+        <label style="font-size:12px;color:var(--text-secondary);">Período de <input type="date" id="filtro-data-inicio" style="width:auto;" /></label>
+        <label style="font-size:12px;color:var(--text-secondary);">até <input type="date" id="filtro-data-fim" style="width:auto;" /></label>
+        <button class="secundario" id="btn-limpar-periodo">Limpar período</button>
+        <div class="spacer"></div>
+      </div>
+      <div id="dashboard-corpo"></div>
+    `;
+    const inputInicio = container.querySelector('#filtro-data-inicio');
+    const inputFim = container.querySelector('#filtro-data-fim');
+    inputInicio.value = periodo.data_inicio;
+    inputFim.value = periodo.data_fim;
+
+    const atualizarPeriodo = Util.debounce(async () => {
+      periodo = { data_inicio: inputInicio.value, data_fim: inputFim.value };
+      await carregarDados(container);
+    }, 300);
+    inputInicio.addEventListener('input', atualizarPeriodo);
+    inputFim.addEventListener('input', atualizarPeriodo);
+    container.querySelector('#btn-limpar-periodo').addEventListener('click', async () => {
+      periodo = { data_inicio: '', data_fim: '' };
+      inputInicio.value = '';
+      inputFim.value = '';
+      await carregarDados(container);
+    });
+
+    await carregarDados(container);
   }
 
   return { render };

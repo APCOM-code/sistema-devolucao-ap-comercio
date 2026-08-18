@@ -28,6 +28,18 @@ acesso depois disso demora uns 30-50 segundos pra "acordar" — depois disso fic
 - **Importar Planilha** — sobe um `.xlsx` baixado do Google Sheets direto pelo navegador (sem
   terminal). Mostra quanto vai mudar antes de aplicar.
 
+## Filtro por período e exportar Excel
+
+Registro Central, Laudo, Recurso e Saldão têm filtro **De / Até** por data (a data do Registro
+Central — quando a devolução foi feita), e um botão **Exportar Excel** que baixa exatamente o
+que está filtrado na tela. Isso é pensado pra acompanhar meta por funcionário: filtra por
+período (e por Responsável, no Registro Central) e exporta pra conferir depois.
+
+O Dashboard também tem filtro de período no topo, que recalcula todos os números pro intervalo
+escolhido. **Todo número do Dashboard é clicável** — clicar leva direto pro Registro Central já
+filtrado com a lista de pedidos por trás daquele número (ex: clicar em "Prejuízo Real" mostra só
+os pedidos que compõem aquele prejuízo).
+
 ## Como o dinheiro é calculado
 
 Três valores contam de verdade no resultado de cada pedido: **Custo do Produto** (só quando o

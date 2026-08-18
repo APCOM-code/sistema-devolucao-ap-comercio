@@ -102,14 +102,28 @@ const PaginaRegistroCentral = (() => {
     return `<span class="badge cenario-${info.classe}">${info.texto}</span>`;
   }
 
-  async function carregarTabela(container) {
+  function paramsCenario(valor) {
+    if (!valor) return {};
+    if (valor === 'desconhecido') return { categoria_condicao: 'desconhecido' };
+    const [categoria_condicao, reembolsado] = valor.split('|');
+    return { categoria_condicao, reembolsado };
+  }
+
+  function lerFiltros(container) {
     const f = container.querySelector('#filtros');
-    const params = {
+    return {
       status_geral: f.querySelector('[name="status_geral"]').value,
       destinacao: f.querySelector('[name="destinacao"]').value,
       responsavel: f.querySelector('[name="responsavel"]').value,
       q: f.querySelector('[name="q"]').value.trim(),
+      data_inicio: f.querySelector('[name="data_inicio"]').value,
+      data_fim: f.querySelector('[name="data_fim"]').value,
+      ...paramsCenario(f.querySelector('[name="cenario"]').value),
     };
+  }
+
+  async function carregarTabela(container) {
+    const params = lerFiltros(container);
     const area = container.querySelector('#tabela-area');
     const pedidos = await Api.listar('pedidos', params);
     if (pedidos.length === 0) {
@@ -158,22 +172,41 @@ const PaginaRegistroCentral = (() => {
     });
   }
 
-  async function render(container) {
+  const CENARIO_OPCOES = [
+    ['danificado|0', 'Perda total'],
+    ['danificado|1', 'Recuperado no descarte'],
+    ['bom|1', 'Ganho duplo'],
+    ['bom|0', 'Neutro'],
+    ['desconhecido', 'Sem laudo'],
+  ];
+
+  function exportarExcel(container) {
+    const params = lerFiltros(container);
+    const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== '' && v != null));
+    window.location.href = `/api/pedidos/exportar?${qs}`;
+  }
+
+  async function render(container, _param, query = {}) {
     const responsaveis = await Api.listar('responsaveis');
     container.innerHTML = `
       <h1>Registro Central de Devoluções</h1>
       <p class="subtitulo">Preencha aqui primeiro — as outras abas (Laudo, Recurso, Saldão) buscam os dados automaticamente pelo Nº do Pedido.</p>
       <div class="toolbar" id="filtros">
-        <input type="text" name="q" placeholder="Buscar por Nº pedido, SKU ou obs..." />
-        <select name="status_geral"><option value="">Status: todos</option>${STATUS.map((s) => `<option value="${s}">${s}</option>`).join('')}</select>
-        <select name="destinacao"><option value="">Destinação: todas</option>${DESTINACOES.map((d) => `<option value="${d}">${d}</option>`).join('')}</select>
-        <select name="responsavel"><option value="">Responsável: todos</option>${responsaveis.map((r) => `<option value="${r.nome}">${r.nome}</option>`).join('')}</select>
+        <input type="text" name="q" placeholder="Buscar por Nº pedido, SKU ou obs..." value="${query.q || ''}" />
+        <select name="status_geral"><option value="">Status: todos</option>${STATUS.map((s) => `<option value="${s}" ${query.status_geral === s ? 'selected' : ''}>${s}</option>`).join('')}</select>
+        <select name="destinacao"><option value="">Destinação: todas</option>${DESTINACOES.map((d) => `<option value="${d}" ${query.destinacao === d ? 'selected' : ''}>${d}</option>`).join('')}</select>
+        <select name="cenario"><option value="">Cenário: todos</option>${CENARIO_OPCOES.map(([v, t]) => `<option value="${v}" ${(query.categoria_condicao && `${query.categoria_condicao}|${query.reembolsado || '0'}` === v) || query.categoria_condicao === v ? 'selected' : ''}>${t}</option>`).join('')}</select>
+        <select name="responsavel"><option value="">Responsável: todos</option>${responsaveis.map((r) => `<option value="${r.nome}" ${query.responsavel === r.nome ? 'selected' : ''}>${r.nome}</option>`).join('')}</select>
+        <label style="font-size:12px;color:var(--text-secondary);">De <input type="date" name="data_inicio" value="${query.data_inicio || ''}" style="width:auto;" /></label>
+        <label style="font-size:12px;color:var(--text-secondary);">Até <input type="date" name="data_fim" value="${query.data_fim || ''}" style="width:auto;" /></label>
         <div class="spacer"></div>
+        <button class="secundario" id="btn-exportar">⬇ Exportar Excel</button>
         <button id="btn-novo">+ Novo Pedido</button>
       </div>
       <div id="tabela-area"></div>
     `;
     container.querySelector('#btn-novo').addEventListener('click', () => abrirFormulario(container, null));
+    container.querySelector('#btn-exportar').addEventListener('click', () => exportarExcel(container));
     container.querySelectorAll('#filtros input, #filtros select').forEach((el) => {
       el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', Util.debounce(() => carregarTabela(container), 300));
     });
