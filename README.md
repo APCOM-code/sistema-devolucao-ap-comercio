@@ -30,10 +30,13 @@ acesso depois disso demora uns 30-50 segundos pra "acordar" — depois disso fic
 
 ## Como o dinheiro é calculado
 
-O custo do produto só conta como prejuízo quando o produto **não volta pra estoque** (Laudo com
-condição Regular/Ruim/Péssimo). Produto que volta bom não é perda — o custo se recupera numa
-venda futura. Por isso cada pedido cai num destes 4 cenários (mais um "sem laudo" quando ainda
-não foi avaliado):
+Só dois valores contam de verdade no resultado de cada pedido: **Custo do Produto** (só quando o
+produto está danificado — Laudo com condição Regular/Ruim/Péssimo) e **Frete Devolução** (só
+quando é cobrado). **Comissão ML e Frete Envio ficam de fora do cálculo** — o Mercado Livre
+sempre cancela os dois em qualquer devolução, então preencher esses campos é só pra conferência/
+histórico, não representa dinheiro perdido de verdade. Produto que volta bom não é perda — o
+custo do produto se recupera numa venda futura. Por isso cada pedido cai num destes 4 cenários
+(mais um "sem laudo" quando ainda não foi avaliado):
 
 | Cenário | Produto | Reembolso ML | O que significa |
 |---|---|---|---|
