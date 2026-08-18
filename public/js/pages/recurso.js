@@ -1,4 +1,4 @@
-const PaginaRecurso = criarPaginaFilha({
+const CONFIG_RECURSO = {
   recurso: 'recursos',
   titulo: 'Recurso e Reembolso — Plataforma',
   subtitulo: 'Digite o Nº do Pedido — plataforma, valor de venda e destinação são buscados automaticamente.',
@@ -17,4 +17,5 @@ const PaginaRecurso = criarPaginaFilha({
     { nome: 'valor_reembolso', label: 'Reembolso', formato: Util.moeda },
     { nome: 'data_abertura', label: 'Abertura', formato: Util.dataBr },
   ],
-});
+};
+const PaginaRecurso = criarPaginaFilha(CONFIG_RECURSO);

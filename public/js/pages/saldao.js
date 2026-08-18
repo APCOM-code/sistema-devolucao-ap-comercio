@@ -1,4 +1,4 @@
-const PaginaSaldao = criarPaginaFilha({
+const CONFIG_SALDAO = {
   recurso: 'saldao',
   titulo: 'Produtos Enviados ao Saldão',
   subtitulo: 'Digite o Nº do Pedido — produto, motivo original e valor de venda são buscados automaticamente.',
@@ -17,4 +17,5 @@ const PaginaSaldao = criarPaginaFilha({
     { nome: 'data_envio', label: 'Data Envio', formato: Util.dataBr },
     { nome: 'nf_emitida_parceiro', label: 'NF Parceiro?' },
   ],
-});
+};
+const PaginaSaldao = criarPaginaFilha(CONFIG_SALDAO);

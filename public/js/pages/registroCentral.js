@@ -125,7 +125,7 @@ const PaginaRegistroCentral = (() => {
           ${pedidos
             .map(
               (p) => `<tr data-id="${p.id}">
-              <td>${p.numero_pedido}</td>
+              <td><a href="#caso/${encodeURIComponent(p.numero_pedido)}">${p.numero_pedido}</a></td>
               <td>${Util.dataBr(p.data)}</td>
               <td>${p.produto_sku || '—'}</td>
               <td>${p.motivo || '—'}</td>

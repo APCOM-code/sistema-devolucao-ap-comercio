@@ -1,4 +1,4 @@
-const PaginaLaudo = criarPaginaFilha({
+const CONFIG_LAUDO = {
   recurso: 'laudos',
   titulo: 'Laudo de Conferência do Produto',
   subtitulo: 'Digite o Nº do Pedido — os dados do pedido são buscados automaticamente no Registro Central.',
@@ -19,4 +19,5 @@ const PaginaLaudo = criarPaginaFilha({
     { nome: 'dano_fisico', label: 'Dano Físico?' },
     { nome: 'nf_emitida_erp', label: 'NF Emitida?' },
   ],
-});
+};
+const PaginaLaudo = criarPaginaFilha(CONFIG_LAUDO);

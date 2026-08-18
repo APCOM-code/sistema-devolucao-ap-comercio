@@ -36,4 +36,7 @@ const Api = {
   dashboard() {
     return this._req('GET', '/api/dashboard');
   },
+  pendencias() {
+    return this._req('GET', '/api/pendencias');
+  },
 };

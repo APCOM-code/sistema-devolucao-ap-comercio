@@ -77,8 +77,34 @@ const PaginaDashboard = (() => {
       .join('');
   }
 
+  function painelPendencias(pend) {
+    const total = pend.recursos_pendentes.length + pend.pedidos_parados.length;
+    if (total === 0) {
+      return `<div class="painel"><h2>Pendências</h2><p class="subtitulo" style="margin:0;">Nada precisando de atenção agora — todos os recursos e pedidos em andamento estão em dia.</p></div>`;
+    }
+    const linhaRecurso = (r) => `
+      <a href="#caso/${encodeURIComponent(r.numero_pedido)}" class="pendencia-item">
+        <span class="badge ${r.urgencia === 'critica' ? 'cenario-perda' : 'andamento'}">${r.dias}d</span>
+        <span class="pendencia-texto">Recurso do pedido <b>${r.numero_pedido}</b> — ${r.status_recurso}, aberto há ${r.dias} dias</span>
+      </a>`;
+    const linhaPedido = (p) => `
+      <a href="#caso/${encodeURIComponent(p.numero_pedido)}" class="pendencia-item">
+        <span class="badge ${p.urgencia === 'critica' ? 'cenario-perda' : 'andamento'}">${p.dias}d</span>
+        <span class="pendencia-texto">Pedido <b>${p.numero_pedido}</b> parado em "${p.status_geral}" (${p.destinacao || 'sem destinação'}) há ${p.dias} dias</span>
+      </a>`;
+    return `
+      <div class="painel" style="border-color:var(--warning);">
+        <h2>Pendências — ${total} item(ns) precisam de ação</h2>
+        <p class="subtitulo" style="margin-top:-6px;">Recursos parados há 7+ dias e pedidos em andamento sem mudança recente. Clique pra abrir o Caso.</p>
+        <div class="pendencia-lista">
+          ${pend.recursos_pendentes.map(linhaRecurso).join('')}
+          ${pend.pedidos_parados.map(linhaPedido).join('')}
+        </div>
+      </div>`;
+  }
+
   async function render(container) {
-    const d = await Api.dashboard();
+    const [d, pend] = await Promise.all([Api.dashboard(), Api.pendencias()]);
     const op = d.operacional;
     const fin = d.financeiro;
     const totalOrfaos = d.alertas.laudos_sem_pedido + d.alertas.recursos_sem_pedido + d.alertas.saldao_sem_pedido;
@@ -90,6 +116,8 @@ const PaginaDashboard = (() => {
     container.innerHTML = `
       <h1>Dashboard de Devoluções</h1>
       <p class="subtitulo">Pós-vendas e devolução — visão geral de todos os registros.</p>
+
+      ${painelPendencias(pend)}
 
       ${
         totalOrfaos > 0

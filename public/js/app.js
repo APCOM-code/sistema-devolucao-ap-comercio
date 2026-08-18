@@ -4,20 +4,24 @@ const Paginas = {
   laudo: PaginaLaudo,
   recurso: PaginaRecurso,
   saldao: PaginaSaldao,
+  importar: PaginaImportar,
+  caso: PaginaCaso,
 };
 
 async function navegar() {
-  const hash = (location.hash || '#dashboard').replace('#', '');
-  const pagina = Paginas[hash] || Paginas.dashboard;
+  const partes = (location.hash || '#dashboard').replace('#', '').split('/');
+  const nome = partes[0];
+  const param = partes[1] ? decodeURIComponent(partes[1]) : null;
+  const pagina = Paginas[nome] || Paginas.dashboard;
 
   document.querySelectorAll('#nav-tabs a').forEach((a) => {
-    a.classList.toggle('active', a.dataset.tab === hash);
+    a.classList.toggle('active', a.dataset.tab === nome);
   });
 
   const container = document.getElementById('conteudo');
   container.innerHTML = '';
   try {
-    await pagina.render(container);
+    await pagina.render(container, param);
   } catch (err) {
     console.error(err);
     container.innerHTML = `<div class="vazio">Erro ao carregar: ${err.message}</div>`;

@@ -11,16 +11,39 @@ Funciona em qualquer computador, tablet ou celular com internet — não precisa
 loja. Por ser um plano gratuito, se ninguém acessar por 15 minutos o site "dorme"; o primeiro
 acesso depois disso demora uns 30-50 segundos pra "acordar" — depois disso fica rápido normal.
 
-## As 5 telas
+## As 7 telas
 
-- **Dashboard** — números gerais: total de reclamações, em andamento/encerrados, reembolso
-  recebido, custos, resultado positivo/negativo e saldo líquido total, além do resultado por
-  destinação (Reembalar, Assistência técnica, Saldão parceiro etc.).
-- **Registro Central** — cadastro principal de cada devolução. Preencha aqui primeiro.
-- **Laudo** — inspeção física do produto devolvido. Digite o Nº do Pedido e os dados do
-  Registro Central (plataforma, SKU etc.) aparecem automaticamente.
+- **Dashboard** — a tela inicial. Mostra primeiro o que precisa de ação hoje (**Pendências**:
+  recursos parados há 7+ dias, pedidos sem movimento recente), depois **Prejuízo Real ×
+  Ganho Compensatório** (ver seção "Como o dinheiro é calculado" abaixo), números operacionais
+  e o resultado por cenário/destinação.
+- **Registro Central** — cadastro principal de cada devolução. Preencha aqui primeiro. O Nº do
+  Pedido é clicável e leva direto pro **Caso**.
+- **Laudo** — inspeção física do produto devolvido.
 - **Recurso** — acompanhamento do recurso/contestação aberto na plataforma (Mercado Livre).
 - **Saldão Parceiro** — produtos enviados para o parceiro de saldão.
+- **Caso** — busca por Nº de Pedido e mostra Registro Central + Laudo + Recurso + Saldão de um
+  mesmo pedido numa página só, cada bloco salva sozinho. É o jeito mais rápido de resolver um
+  caso do início ao fim sem ficar trocando de aba.
+- **Importar Planilha** — sobe um `.xlsx` baixado do Google Sheets direto pelo navegador (sem
+  terminal). Mostra quanto vai mudar antes de aplicar.
+
+## Como o dinheiro é calculado
+
+O custo do produto só conta como prejuízo quando o produto **não volta pra estoque** (Laudo com
+condição Regular/Ruim/Péssimo). Produto que volta bom não é perda — o custo se recupera numa
+venda futura. Por isso cada pedido cai num destes 4 cenários (mais um "sem laudo" quando ainda
+não foi avaliado):
+
+| Cenário | Produto | Reembolso ML | O que significa |
+|---|---|---|---|
+| Perda total | Danificado | Não | Prejuízo real — dinheiro que não volta |
+| Recuperado no descarte | Danificado | Sim | Reembolso cobre o descarte, sem prejuízo |
+| Ganho duplo | Bom | Sim | Reembolso + produto volta pra vender de novo |
+| Neutro | Bom | Não | Sem perda — custo recuperado na próxima venda |
+
+O Dashboard mostra **Prejuízo Real** (soma só da "Perda total") e **Ganho Compensatório** (soma
+só do "Ganho duplo"), e quanto um cobre o outro em %.
 
 ## Onde ficam os dados
 
@@ -38,17 +61,18 @@ latest commit** (esse projeto usa deploy manual, não automático, porque foi co
 
 ## Sincronizar uma planilha atualizada
 
-Se um dia vocês exportarem a planilha do Google Sheets como `.xlsx` de novo e quiserem trazer
-pedidos novos/atualizados pro sistema, isso é feito localmente (não pelo site):
+Pela própria tela: **Importar Planilha** → escolher o `.xlsx` baixado do Google Sheets →
+**Analisar planilha** (mostra quantos registros são novos, atualizados, ou ambíguos e precisam
+de revisão manual, mais avisos de datas suspeitas) → **Confirmar Importação**.
 
-1. Coloque o arquivo baixado em qualquer pasta.
-2. Rode `node server/import/parse_xlsx.js "caminho\para\o\arquivo.xlsx"`.
-3. Rode `node server/import/sync_from_xlsx.js`.
+O casamento é feito pelo Nº do Pedido (não pela posição na planilha), e uma célula vazia nunca
+apaga um dado que já existia no sistema — só atualiza o que realmente veio preenchido de novo.
+Pedidos com mais de um registro igual no sistema são pulados automaticamente por segurança
+(ficam listados pra revisão manual).
 
-O script só atualiza campos que mudaram (nunca deixa uma célula vazia apagar um dado que já
-existia) e avisa sobre datas ou valores suspeitos antes de aplicar qualquer coisa. Isso precisa
-rodar num computador com as variáveis `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` configuradas
-(peça pra quem fez a configuração original, se precisar).
+Isso substitui os scripts de terminal usados na importação inicial (`parse_xlsx.js` +
+`sync_from_xlsx.js`, que continuam existindo em `server/import/` só como alternativa local, caso
+precise depurar algo).
 
 ## Rodar localmente (modo offline, alternativa)
 
@@ -72,6 +96,6 @@ foram identificados e tratados sem perda de dados:
   correspondente no Registro Central. Ficam marcados com a tag **"órfão"** nas listagens e
   contados no aviso do Dashboard.
 - **Um Nº de Pedido duplicado** (`2000013579181909`) com dois registros diferentes no Registro
-  Central original — os dois foram mantidos.
+  Central original — os dois foram mantidos, e a tela de Caso deixa escolher qual editar.
 - Datas com erro de digitação na planilha (ex: ano digitado errado) foram deixadas em branco em
   vez de importadas erradas — dá pra corrigir na tela do sistema quando quiser.
