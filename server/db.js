@@ -90,7 +90,9 @@ CREATE INDEX IF NOT EXISTS idx_saldao_numero ON saldao(numero_pedido);
 -- View central do calculo financeiro. Um pedido so perde o custo do produto quando o
 -- laudo mais recente indica produto danificado (Regular/Ruim/Pessimo) -- produto em boa
 -- condicao (Perfeito/Bom) volta pro estoque e o custo NAO conta como prejuizo.
--- Comissao/frete ficam como registrados manualmente pelos colaboradores (nao sao ajustados).
+-- Comissao ML e Frete Envio ficam guardados so como registro/conferencia (o Mercado Livre
+-- cancela os dois em qualquer devolucao) -- NAO entram na conta do resultado. So o Frete
+-- Devolucao e cobrado de fato (depende do motivo; nunca em Arrependimento).
 DROP VIEW IF EXISTS pedidos_calc;
 CREATE VIEW pedidos_calc AS
 WITH laudo_recente AS (
@@ -109,7 +111,7 @@ SELECT
   ROUND(
     COALESCE(p.reembolso_ml, 0)
     - CASE WHEN lr.condicao_geral IN ('Perfeito - como novo', 'Bom') THEN 0 ELSE COALESCE(p.custo_produto, 0) END
-    - COALESCE(p.comissao_ml, 0) - COALESCE(p.frete_envio, 0) - COALESCE(p.frete_devolucao, 0)
+    - COALESCE(p.frete_devolucao, 0)
   , 2) AS resultado_financeiro
 FROM pedidos p
 LEFT JOIN laudo_recente lr ON lr.numero_pedido = p.numero_pedido AND lr.rn = 1;

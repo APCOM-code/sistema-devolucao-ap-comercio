@@ -7,3 +7,4 @@ devolucoes.db-wal
 # Dados reais do historico - nunca vao pro repositorio publico
 server/import/raw_planilha.txt
 server/import/seed_data.json
+server/import/backup_tarifas_*.json
