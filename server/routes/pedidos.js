@@ -7,7 +7,7 @@ const CAMPOS = [
   'numero_pedido', 'data', 'plataforma', 'tipo_envio', 'produto_sku', 'motivo',
   'contestacao', 'resultado_contestacao', 'produto_recebido', 'status_geral',
   'destinacao', 'valor_venda', 'reembolso_ml', 'custo_produto', 'comissao_ml',
-  'frete_envio', 'frete_devolucao', 'responsavel', 'obs',
+  'frete_envio', 'frete_devolucao', 'custo_componentes', 'responsavel', 'obs',
 ];
 
 router.get('/', async (req, res) => {
@@ -74,7 +74,7 @@ router.put('/:id', async (req, res) => {
   const existenteR = await db.execute({ sql: 'SELECT * FROM pedidos WHERE id = ?', args: [req.params.id] });
   if (existenteR.rows.length === 0) return res.status(404).json({ erro: 'Pedido nao encontrado' });
   const existente = existenteR.rows[0];
-  const valores = CAMPOS.map((c) => req.body[c] ?? existente[c]);
+  const valores = CAMPOS.map((c) => (c in req.body ? req.body[c] : existente[c]));
   await db.execute({
     sql: `UPDATE pedidos SET ${CAMPOS.map((c) => `${c} = ?`).join(', ')}, updated_at = datetime('now') WHERE id = ?`,
     args: [...valores, req.params.id],

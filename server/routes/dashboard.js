@@ -14,12 +14,13 @@ router.get('/', async (req, res) => {
   );
 
   // Total de Custos = so os custos que de fato ficam com a gente (custo do produto quando
-  // danificado + frete de devolucao quando cobrado). Comissao ML e Frete Envio ficam de fora
-  // porque o Mercado Livre sempre cancela os dois numa devolucao -- ver server/db.js.
+  // danificado + frete de devolucao quando cobrado + componentes comprados pra completar o
+  // pedido). Comissao ML e Frete Envio ficam de fora porque o Mercado Livre sempre cancela os
+  // dois numa devolucao -- ver server/db.js.
   const financeiroR = await db.execute(
     `SELECT
       ROUND(SUM(COALESCE(reembolso_ml,0)), 2) AS total_reembolso_recebido,
-      ROUND(SUM(CASE WHEN categoria_condicao = 'bom' THEN 0 ELSE COALESCE(custo_produto,0) END) + SUM(COALESCE(frete_devolucao,0)), 2) AS total_custos,
+      ROUND(SUM(CASE WHEN categoria_condicao = 'bom' THEN 0 ELSE COALESCE(custo_produto,0) END) + SUM(COALESCE(frete_devolucao,0)) + SUM(COALESCE(custo_componentes,0)), 2) AS total_custos,
       ROUND(SUM(resultado_financeiro), 2) AS saldo_liquido_total,
       ROUND(SUM(CASE WHEN categoria_condicao = 'danificado' AND reembolsado = 0 THEN resultado_financeiro ELSE 0 END), 2) AS prejuizo_real,
       ROUND(SUM(CASE WHEN categoria_condicao = 'bom' AND reembolsado = 1 THEN resultado_financeiro ELSE 0 END), 2) AS ganho_compensatorio

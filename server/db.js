@@ -8,7 +8,7 @@ const authToken = process.env.TURSO_AUTH_TOKEN;
 
 const db = createClient(authToken ? { url, authToken } : { url });
 
-const SCHEMA = `
+const SCHEMA_TABELAS = `
 CREATE TABLE IF NOT EXISTS responsaveis (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   nome TEXT NOT NULL UNIQUE
@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS pedidos (
   comissao_ml REAL,
   frete_envio REAL,
   frete_devolucao REAL,
+  custo_componentes REAL,
   responsavel TEXT,
   obs TEXT,
   created_at TEXT DEFAULT (datetime('now')),
@@ -86,13 +87,16 @@ CREATE TABLE IF NOT EXISTS saldao (
   updated_at TEXT DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_saldao_numero ON saldao(numero_pedido);
+`;
 
--- View central do calculo financeiro. Um pedido so perde o custo do produto quando o
--- laudo mais recente indica produto danificado (Regular/Ruim/Pessimo) -- produto em boa
--- condicao (Perfeito/Bom) volta pro estoque e o custo NAO conta como prejuizo.
--- Comissao ML e Frete Envio ficam guardados so como registro/conferencia (o Mercado Livre
--- cancela os dois em qualquer devolucao) -- NAO entram na conta do resultado. So o Frete
--- Devolucao e cobrado de fato (depende do motivo; nunca em Arrependimento).
+// View central do calculo financeiro. Um pedido so perde o custo do produto quando o
+// laudo mais recente indica produto danificado (Regular/Ruim/Pessimo) -- produto em boa
+// condicao (Perfeito/Bom) volta pro estoque e o custo NAO conta como prejuizo.
+// Comissao ML e Frete Envio ficam guardados so como registro/conferencia (o Mercado Livre
+// cancela os dois em qualquer devolucao) -- NAO entram na conta do resultado. Frete Devolucao
+// e Custo de Componentes (comprados pra completar um pedido que chegou incompleto) sao custos
+// reais e sempre contam, independente da condicao do produto.
+const SCHEMA_VIEW = `
 DROP VIEW IF EXISTS pedidos_calc;
 CREATE VIEW pedidos_calc AS
 WITH laudo_recente AS (
@@ -112,13 +116,26 @@ SELECT
     COALESCE(p.reembolso_ml, 0)
     - CASE WHEN lr.condicao_geral IN ('Perfeito - como novo', 'Bom') THEN 0 ELSE COALESCE(p.custo_produto, 0) END
     - COALESCE(p.frete_devolucao, 0)
+    - COALESCE(p.custo_componentes, 0)
   , 2) AS resultado_financeiro
 FROM pedidos p
 LEFT JOIN laudo_recente lr ON lr.numero_pedido = p.numero_pedido AND lr.rn = 1;
 `;
 
+// Colunas novas em banco que ja existia antes delas (local ou Turso ja criados sem a coluna).
+// CREATE TABLE IF NOT EXISTS nao adiciona coluna em tabela existente, entao migra na mao aqui.
+async function migrarColunasNovas() {
+  try {
+    await db.execute('ALTER TABLE pedidos ADD COLUMN custo_componentes REAL');
+  } catch (err) {
+    if (!/duplicate column/i.test(err.message)) throw err;
+  }
+}
+
 async function initSchema() {
-  await db.executeMultiple(SCHEMA);
+  await db.executeMultiple(SCHEMA_TABELAS);
+  await migrarColunasNovas();
+  await db.executeMultiple(SCHEMA_VIEW);
 }
 
 module.exports = { db, initSchema };

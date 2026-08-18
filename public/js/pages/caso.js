@@ -115,6 +115,7 @@ const PaginaCaso = (() => {
     { nome: 'comissao_ml', label: 'Comissão ML (R$)', tipo: 'money' },
     { nome: 'frete_envio', label: 'Frete Envio (R$)', tipo: 'money' },
     { nome: 'frete_devolucao', label: 'Frete Devolução (R$)', tipo: 'money' },
+    { nome: 'custo_componentes', label: 'Custo Componentes Comprados (R$)', tipo: 'money' },
     { nome: 'responsavel', label: 'Responsável', tipo: 'text' },
     { nome: 'obs', label: 'Obs.', tipo: 'textarea', full: true },
   ];

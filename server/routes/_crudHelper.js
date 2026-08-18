@@ -48,7 +48,7 @@ function createCrudRouter(tabela, campos) {
     const existenteR = await db.execute({ sql: `SELECT * FROM ${tabela} WHERE id = ?`, args: [req.params.id] });
     if (existenteR.rows.length === 0) return res.status(404).json({ erro: 'Registro nao encontrado' });
     const existente = existenteR.rows[0];
-    const valores = colunas.map((c) => req.body[c] ?? existente[c]);
+    const valores = colunas.map((c) => (c in req.body ? req.body[c] : existente[c]));
     await db.execute({
       sql: `UPDATE ${tabela} SET ${colunas.map((c) => `${c} = ?`).join(', ')}, updated_at = datetime('now') WHERE id = ?`,
       args: [...valores, req.params.id],

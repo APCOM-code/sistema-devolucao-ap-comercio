@@ -2,7 +2,7 @@ const PaginaRegistroCentral = (() => {
   const MOTIVOS = ['Arrependimento', 'Produto com defeito', 'Danificado pelo comprador', 'Danificado na entrega', 'Defeito de fabricação', 'Outros'];
   const STATUS = ['Em andamento', 'Encerrado'];
   const DESTINACOES = ['Reembalar', 'Assistência técnica', 'Saldão parceiro', 'Enviado ao fabricante', 'Volta ao estoque', 'Aguardando gestor', 'Descarte'];
-  const CAMPOS_MONEY = ['valor_venda', 'reembolso_ml', 'custo_produto', 'comissao_ml', 'frete_envio', 'frete_devolucao'];
+  const CAMPOS_MONEY = ['valor_venda', 'reembolso_ml', 'custo_produto', 'comissao_ml', 'frete_envio', 'frete_devolucao', 'custo_componentes'];
 
   async function abrirFormulario(container, registro) {
     const editando = !!registro;
@@ -37,6 +37,7 @@ const PaginaRegistroCentral = (() => {
           <div class="campo"><label>Comissão ML (R$)</label><input type="number" step="0.01" name="comissao_ml" value="${g('comissao_ml')}" /></div>
           <div class="campo"><label>Frete Envio (R$)</label><input type="number" step="0.01" name="frete_envio" value="${g('frete_envio')}" /></div>
           <div class="campo"><label>Frete Devolução (R$)</label><input type="number" step="0.01" name="frete_devolucao" value="${g('frete_devolucao')}" /></div>
+          <div class="campo"><label>Custo Componentes Comprados (R$)</label><input type="number" step="0.01" name="custo_componentes" value="${g('custo_componentes')}" placeholder="preencher após comprar o que faltava" /></div>
           <div class="campo full"><label>Obs.</label><textarea name="obs">${g('obs')}</textarea></div>
         </div>
         <div class="modal-acoes">
